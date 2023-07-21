@@ -1,0 +1,739 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.6, pytest-7.4.0, pluggy-1.2.0 -- /home/unix_blamb/.pyenv/versions/3.10.6/envs/taxifare-env/bin/python3.10
+cachedir: .pytest_cache
+rootdir: /home/unix_blamb/code/blamb888/@@@cloud-training-new/tests
+configfile: pytest_kitt.ini
+collecting ... collected 9 items
+
+tests/cloud_training/test_cloud_data.py::TestCloudData::test_big_query_dataset_variable_exists PASSED [ 11%]
+tests/cloud_training/test_cloud_data.py::TestCloudData::test_cloud_data_create_dataset PASSED [ 22%]
+tests/cloud_training/test_cloud_data.py::TestCloudData::test_cloud_data_create_table PASSED [ 33%]
+tests/cloud_training/test_main.py::TestMain::test_route_preprocess PASSED [ 44%]
+tests/cloud_training/test_main.py::TestMain::test_route_train[local] FAILED [ 55%]
+tests/cloud_training/test_main.py::TestMain::test_route_train[gcs] FAILED [ 66%]
+tests/cloud_training/test_main.py::TestMain::test_route_evaluate FAILED  [ 77%]
+tests/cloud_training/test_main.py::TestMain::test_route_pred FAILED      [ 88%]
+tests/cloud_training/test_vm.py::test_i_am_a_vm FAILED                   [100%]
+
+=================================== FAILURES ===================================
+_______________________ TestMain.test_route_train[local] _______________________
+
+self = <tests.cloud_training.test_main.TestMain object at 0x7fbba226a290>
+fixture_processed_1k =            0    1    2    3    4    5   ...   60   61   62   63   64         65
+0    0.000000  0.0  0.0  0.0  1.0  0.0...0.0   6.500000
+446  0.428571  0.0  0.0  0.0  0.0  0.0  ...  0.0  0.0  0.0  0.0  0.0   8.500000
+
+[447 rows x 66 columns]
+model_target = 'local'
+
+    @pytest.mark.parametrize('model_target', ['local' , 'gcs'])
+    def test_route_train(self, fixture_processed_1k, model_target):
+        """Test route train behave as expected, for various context of LOCAL or GCS model storage"""
+    
+        # 1) SETUP
+        old_model_target = os.environ.get("MODEL_TARGET")
+        os.environ.update(MODEL_TARGET=model_target)
+    
+        data_processed_path = Path(LOCAL_DATA_PATH).joinpath("processed",f"processed_{MIN_DATE}_{MAX_DATE}_{DATA_SIZE}.csv")
+        data_processed_exists = data_processed_path.is_file()
+        if data_processed_exists:
+            shutil.copyfile(data_processed_path, f'{data_processed_path}_backup')
+            data_processed_path.unlink()
+    
+        data_processed_fixture_path = "https://storage.googleapis.com/datascience-mlops/taxi-fare-ny/solutions/data_processed_fixture_2009-01-01_2015-01-01_1k.csv"
+        os.system(f"curl {data_processed_fixture_path} > {data_processed_path}")
+    
+        # 2) ACT
+        from taxifare.interface.main import train
+    
+        # Train it from Big Query
+>       train(min_date=MIN_DATE, max_date=MAX_DATE, learning_rate=0.01, patience=0)
+
+tests/cloud_training/test_main.py:85: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+taxifare/interface/main.py:139: in train
+    model = load_model()
+taxifare/ml_logic/registry.py:102: in load_model
+    blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix="model"))
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/client.py:780: in get_bucket
+    bucket.reload(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/bucket.py:1077: in reload
+    super(Bucket, self).reload(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/_helpers.py:246: in reload
+    api_response = client._get_resource(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/client.py:385: in _get_resource
+    return self._connection.api_request(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/_http.py:72: in api_request
+    return call()
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/api_core/retry.py:349: in retry_wrapped_func
+    return retry_target(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/api_core/retry.py:191: in retry_target
+    return target()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <google.cloud.storage._http.Connection object at 0x7fbb410d64d0>
+method = 'GET', path = '/b/taxifare_blamb888'
+query_params = {'projection': 'noAcl'}, data = None, content_type = None
+headers = {}, api_base_url = None, api_version = None, expect_json = True
+_target_object = <Bucket: taxifare_blamb888>, timeout = 60
+extra_api_info = 'gccl-invocation-id/e6450cbe-0226-47a2-a5d7-e21d76514127'
+
+    def api_request(
+        self,
+        method,
+        path,
+        query_params=None,
+        data=None,
+        content_type=None,
+        headers=None,
+        api_base_url=None,
+        api_version=None,
+        expect_json=True,
+        _target_object=None,
+        timeout=_DEFAULT_TIMEOUT,
+        extra_api_info=None,
+    ):
+        """Make a request over the HTTP transport to the API.
+    
+        You shouldn't need to use this method, but if you plan to
+        interact with the API using these primitives, this is the
+        correct one to use.
+    
+        :type method: str
+        :param method: The HTTP method name (ie, ``GET``, ``POST``, etc).
+                       Required.
+    
+        :type path: str
+        :param path: The path to the resource (ie, ``'/b/bucket-name'``).
+                     Required.
+    
+        :type query_params: dict or list
+        :param query_params: A dictionary of keys and values (or list of
+                             key-value pairs) to insert into the query
+                             string of the URL.
+    
+        :type data: str
+        :param data: The data to send as the body of the request. Default is
+                     the empty string.
+    
+        :type content_type: str
+        :param content_type: The proper MIME type of the data provided. Default
+                             is None.
+    
+        :type headers: dict
+        :param headers: extra HTTP headers to be sent with the request.
+    
+        :type api_base_url: str
+        :param api_base_url: The base URL for the API endpoint.
+                             Typically you won't have to provide this.
+                             Default is the standard API base URL.
+    
+        :type api_version: str
+        :param api_version: The version of the API to call.  Typically
+                            you shouldn't provide this and instead use
+                            the default for the library.  Default is the
+                            latest API version supported by
+                            google-cloud-python.
+    
+        :type expect_json: bool
+        :param expect_json: If True, this method will try to parse the
+                            response as JSON and raise an exception if
+                            that cannot be done.  Default is True.
+    
+        :type _target_object: :class:`object`
+        :param _target_object:
+            (Optional) Protected argument to be used by library callers. This
+            can allow custom behavior, for example, to defer an HTTP request
+            and complete initialization of the object at a later time.
+    
+        :type timeout: float or tuple
+        :param timeout: (optional) The amount of time, in seconds, to wait
+            for the server response.
+    
+            Can also be passed as a tuple (connect_timeout, read_timeout).
+            See :meth:`requests.Session.request` documentation for details.
+    
+        :type extra_api_info: string
+        :param extra_api_info: (optional) Extra api info to be appended to
+            the X-Goog-API-Client header
+    
+        :raises ~google.cloud.exceptions.GoogleCloudError: if the response code
+            is not 200 OK.
+        :raises ValueError: if the response content type is not JSON.
+        :rtype: dict or str
+        :returns: The API response payload, either as a raw string or
+                  a dictionary if the response is valid JSON.
+        """
+        url = self.build_api_url(
+            path=path,
+            query_params=query_params,
+            api_base_url=api_base_url,
+            api_version=api_version,
+        )
+    
+        # Making the executive decision that any dictionary
+        # data will be sent properly as JSON.
+        if data and isinstance(data, dict):
+            data = json.dumps(data)
+            content_type = "application/json"
+    
+        response = self._make_request(
+            method=method,
+            url=url,
+            data=data,
+            content_type=content_type,
+            headers=headers,
+            target_object=_target_object,
+            timeout=timeout,
+            extra_api_info=extra_api_info,
+        )
+    
+        if not 200 <= response.status_code < 300:
+>           raise exceptions.from_http_response(response)
+E           google.api_core.exceptions.NotFound: 404 GET https://storage.googleapis.com/storage/v1/b/taxifare_blamb888?projection=noAcl&prettyPrint=false: The specified bucket does not exist.
+
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/_http/__init__.py:494: NotFound
+----------------------------- Captured stdout call -----------------------------
+[35m
+⭐️ Use case: train[0m
+[34m
+Loading preprocessed validation data...[0m
+[34m
+Load data from local CSV...[0m
+✅ Data loaded, with shape (447, 66)
+[34m
+Load latest model from GCS...[0m
+----------------------------- Captured stderr call -----------------------------
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  153k  100  153k    0     0  1236k      0 --:--:-- --:--:-- --:--:-- 1241k
+________________________ TestMain.test_route_train[gcs] ________________________
+
+self = <tests.cloud_training.test_main.TestMain object at 0x7fbba226a3b0>
+fixture_processed_1k =            0    1    2    3    4    5   ...   60   61   62   63   64         65
+0    0.000000  0.0  0.0  0.0  1.0  0.0...0.0   6.500000
+446  0.428571  0.0  0.0  0.0  0.0  0.0  ...  0.0  0.0  0.0  0.0  0.0   8.500000
+
+[447 rows x 66 columns]
+model_target = 'gcs'
+
+    @pytest.mark.parametrize('model_target', ['local' , 'gcs'])
+    def test_route_train(self, fixture_processed_1k, model_target):
+        """Test route train behave as expected, for various context of LOCAL or GCS model storage"""
+    
+        # 1) SETUP
+        old_model_target = os.environ.get("MODEL_TARGET")
+        os.environ.update(MODEL_TARGET=model_target)
+    
+        data_processed_path = Path(LOCAL_DATA_PATH).joinpath("processed",f"processed_{MIN_DATE}_{MAX_DATE}_{DATA_SIZE}.csv")
+        data_processed_exists = data_processed_path.is_file()
+        if data_processed_exists:
+            shutil.copyfile(data_processed_path, f'{data_processed_path}_backup')
+            data_processed_path.unlink()
+    
+        data_processed_fixture_path = "https://storage.googleapis.com/datascience-mlops/taxi-fare-ny/solutions/data_processed_fixture_2009-01-01_2015-01-01_1k.csv"
+        os.system(f"curl {data_processed_fixture_path} > {data_processed_path}")
+    
+        # 2) ACT
+        from taxifare.interface.main import train
+    
+        # Train it from Big Query
+>       train(min_date=MIN_DATE, max_date=MAX_DATE, learning_rate=0.01, patience=0)
+
+tests/cloud_training/test_main.py:85: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+taxifare/interface/main.py:139: in train
+    model = load_model()
+taxifare/ml_logic/registry.py:102: in load_model
+    blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix="model"))
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/client.py:780: in get_bucket
+    bucket.reload(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/bucket.py:1077: in reload
+    super(Bucket, self).reload(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/_helpers.py:246: in reload
+    api_response = client._get_resource(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/client.py:385: in _get_resource
+    return self._connection.api_request(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/_http.py:72: in api_request
+    return call()
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/api_core/retry.py:349: in retry_wrapped_func
+    return retry_target(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/api_core/retry.py:191: in retry_target
+    return target()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <google.cloud.storage._http.Connection object at 0x7fbbca51d3c0>
+method = 'GET', path = '/b/taxifare_blamb888'
+query_params = {'projection': 'noAcl'}, data = None, content_type = None
+headers = {}, api_base_url = None, api_version = None, expect_json = True
+_target_object = <Bucket: taxifare_blamb888>, timeout = 60
+extra_api_info = 'gccl-invocation-id/9ffa6904-7818-4cfd-abcf-d5d322979ead'
+
+    def api_request(
+        self,
+        method,
+        path,
+        query_params=None,
+        data=None,
+        content_type=None,
+        headers=None,
+        api_base_url=None,
+        api_version=None,
+        expect_json=True,
+        _target_object=None,
+        timeout=_DEFAULT_TIMEOUT,
+        extra_api_info=None,
+    ):
+        """Make a request over the HTTP transport to the API.
+    
+        You shouldn't need to use this method, but if you plan to
+        interact with the API using these primitives, this is the
+        correct one to use.
+    
+        :type method: str
+        :param method: The HTTP method name (ie, ``GET``, ``POST``, etc).
+                       Required.
+    
+        :type path: str
+        :param path: The path to the resource (ie, ``'/b/bucket-name'``).
+                     Required.
+    
+        :type query_params: dict or list
+        :param query_params: A dictionary of keys and values (or list of
+                             key-value pairs) to insert into the query
+                             string of the URL.
+    
+        :type data: str
+        :param data: The data to send as the body of the request. Default is
+                     the empty string.
+    
+        :type content_type: str
+        :param content_type: The proper MIME type of the data provided. Default
+                             is None.
+    
+        :type headers: dict
+        :param headers: extra HTTP headers to be sent with the request.
+    
+        :type api_base_url: str
+        :param api_base_url: The base URL for the API endpoint.
+                             Typically you won't have to provide this.
+                             Default is the standard API base URL.
+    
+        :type api_version: str
+        :param api_version: The version of the API to call.  Typically
+                            you shouldn't provide this and instead use
+                            the default for the library.  Default is the
+                            latest API version supported by
+                            google-cloud-python.
+    
+        :type expect_json: bool
+        :param expect_json: If True, this method will try to parse the
+                            response as JSON and raise an exception if
+                            that cannot be done.  Default is True.
+    
+        :type _target_object: :class:`object`
+        :param _target_object:
+            (Optional) Protected argument to be used by library callers. This
+            can allow custom behavior, for example, to defer an HTTP request
+            and complete initialization of the object at a later time.
+    
+        :type timeout: float or tuple
+        :param timeout: (optional) The amount of time, in seconds, to wait
+            for the server response.
+    
+            Can also be passed as a tuple (connect_timeout, read_timeout).
+            See :meth:`requests.Session.request` documentation for details.
+    
+        :type extra_api_info: string
+        :param extra_api_info: (optional) Extra api info to be appended to
+            the X-Goog-API-Client header
+    
+        :raises ~google.cloud.exceptions.GoogleCloudError: if the response code
+            is not 200 OK.
+        :raises ValueError: if the response content type is not JSON.
+        :rtype: dict or str
+        :returns: The API response payload, either as a raw string or
+                  a dictionary if the response is valid JSON.
+        """
+        url = self.build_api_url(
+            path=path,
+            query_params=query_params,
+            api_base_url=api_base_url,
+            api_version=api_version,
+        )
+    
+        # Making the executive decision that any dictionary
+        # data will be sent properly as JSON.
+        if data and isinstance(data, dict):
+            data = json.dumps(data)
+            content_type = "application/json"
+    
+        response = self._make_request(
+            method=method,
+            url=url,
+            data=data,
+            content_type=content_type,
+            headers=headers,
+            target_object=_target_object,
+            timeout=timeout,
+            extra_api_info=extra_api_info,
+        )
+    
+        if not 200 <= response.status_code < 300:
+>           raise exceptions.from_http_response(response)
+E           google.api_core.exceptions.NotFound: 404 GET https://storage.googleapis.com/storage/v1/b/taxifare_blamb888?projection=noAcl&prettyPrint=false: The specified bucket does not exist.
+
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/_http/__init__.py:494: NotFound
+----------------------------- Captured stdout call -----------------------------
+[35m
+⭐️ Use case: train[0m
+[34m
+Loading preprocessed validation data...[0m
+[34m
+Load data from local CSV...[0m
+✅ Data loaded, with shape (447, 66)
+[34m
+Load latest model from GCS...[0m
+----------------------------- Captured stderr call -----------------------------
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  153k  100  153k    0     0  1226k      0 --:--:-- --:--:-- --:--:-- 1231k
+_________________________ TestMain.test_route_evaluate _________________________
+
+self = <tests.cloud_training.test_main.TestMain object at 0x7fbba226a260>
+
+    @patch("taxifare.params.MODEL_TARGET", new='local')
+    def test_route_evaluate(self):
+        from taxifare.interface.main import evaluate
+    
+>       mae = evaluate(min_date=MIN_DATE, max_date=MAX_DATE)
+
+tests/cloud_training/test_main.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+taxifare/interface/main.py:182: in evaluate
+    model = load_model(stage=stage)
+taxifare/ml_logic/registry.py:102: in load_model
+    blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix="model"))
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/client.py:780: in get_bucket
+    bucket.reload(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/bucket.py:1077: in reload
+    super(Bucket, self).reload(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/_helpers.py:246: in reload
+    api_response = client._get_resource(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/client.py:385: in _get_resource
+    return self._connection.api_request(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/_http.py:72: in api_request
+    return call()
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/api_core/retry.py:349: in retry_wrapped_func
+    return retry_target(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/api_core/retry.py:191: in retry_target
+    return target()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <google.cloud.storage._http.Connection object at 0x7fbbca4cbaf0>
+method = 'GET', path = '/b/taxifare_blamb888'
+query_params = {'projection': 'noAcl'}, data = None, content_type = None
+headers = {}, api_base_url = None, api_version = None, expect_json = True
+_target_object = <Bucket: taxifare_blamb888>, timeout = 60
+extra_api_info = 'gccl-invocation-id/e5a04e97-ec61-473b-a428-5323dcbf5246'
+
+    def api_request(
+        self,
+        method,
+        path,
+        query_params=None,
+        data=None,
+        content_type=None,
+        headers=None,
+        api_base_url=None,
+        api_version=None,
+        expect_json=True,
+        _target_object=None,
+        timeout=_DEFAULT_TIMEOUT,
+        extra_api_info=None,
+    ):
+        """Make a request over the HTTP transport to the API.
+    
+        You shouldn't need to use this method, but if you plan to
+        interact with the API using these primitives, this is the
+        correct one to use.
+    
+        :type method: str
+        :param method: The HTTP method name (ie, ``GET``, ``POST``, etc).
+                       Required.
+    
+        :type path: str
+        :param path: The path to the resource (ie, ``'/b/bucket-name'``).
+                     Required.
+    
+        :type query_params: dict or list
+        :param query_params: A dictionary of keys and values (or list of
+                             key-value pairs) to insert into the query
+                             string of the URL.
+    
+        :type data: str
+        :param data: The data to send as the body of the request. Default is
+                     the empty string.
+    
+        :type content_type: str
+        :param content_type: The proper MIME type of the data provided. Default
+                             is None.
+    
+        :type headers: dict
+        :param headers: extra HTTP headers to be sent with the request.
+    
+        :type api_base_url: str
+        :param api_base_url: The base URL for the API endpoint.
+                             Typically you won't have to provide this.
+                             Default is the standard API base URL.
+    
+        :type api_version: str
+        :param api_version: The version of the API to call.  Typically
+                            you shouldn't provide this and instead use
+                            the default for the library.  Default is the
+                            latest API version supported by
+                            google-cloud-python.
+    
+        :type expect_json: bool
+        :param expect_json: If True, this method will try to parse the
+                            response as JSON and raise an exception if
+                            that cannot be done.  Default is True.
+    
+        :type _target_object: :class:`object`
+        :param _target_object:
+            (Optional) Protected argument to be used by library callers. This
+            can allow custom behavior, for example, to defer an HTTP request
+            and complete initialization of the object at a later time.
+    
+        :type timeout: float or tuple
+        :param timeout: (optional) The amount of time, in seconds, to wait
+            for the server response.
+    
+            Can also be passed as a tuple (connect_timeout, read_timeout).
+            See :meth:`requests.Session.request` documentation for details.
+    
+        :type extra_api_info: string
+        :param extra_api_info: (optional) Extra api info to be appended to
+            the X-Goog-API-Client header
+    
+        :raises ~google.cloud.exceptions.GoogleCloudError: if the response code
+            is not 200 OK.
+        :raises ValueError: if the response content type is not JSON.
+        :rtype: dict or str
+        :returns: The API response payload, either as a raw string or
+                  a dictionary if the response is valid JSON.
+        """
+        url = self.build_api_url(
+            path=path,
+            query_params=query_params,
+            api_base_url=api_base_url,
+            api_version=api_version,
+        )
+    
+        # Making the executive decision that any dictionary
+        # data will be sent properly as JSON.
+        if data and isinstance(data, dict):
+            data = json.dumps(data)
+            content_type = "application/json"
+    
+        response = self._make_request(
+            method=method,
+            url=url,
+            data=data,
+            content_type=content_type,
+            headers=headers,
+            target_object=_target_object,
+            timeout=timeout,
+            extra_api_info=extra_api_info,
+        )
+    
+        if not 200 <= response.status_code < 300:
+>           raise exceptions.from_http_response(response)
+E           google.api_core.exceptions.NotFound: 404 GET https://storage.googleapis.com/storage/v1/b/taxifare_blamb888?projection=noAcl&prettyPrint=false: The specified bucket does not exist.
+
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/_http/__init__.py:494: NotFound
+----------------------------- Captured stdout call -----------------------------
+[35m
+⭐️ Use case: evaluate[0m
+[34m
+Load latest model from GCS...[0m
+___________________________ TestMain.test_route_pred ___________________________
+
+self = <tests.cloud_training.test_main.TestMain object at 0x7fbba226a800>
+
+    @patch("taxifare.params.MODEL_TARGET", new='local')
+    def test_route_pred(self):
+        from taxifare.interface.main import pred
+    
+>       y_pred = pred()
+
+tests/cloud_training/test_main.py:115: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+taxifare/interface/main.py:247: in pred
+    model = load_model()
+taxifare/ml_logic/registry.py:102: in load_model
+    blobs = list(client.get_bucket(BUCKET_NAME).list_blobs(prefix="model"))
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/client.py:780: in get_bucket
+    bucket.reload(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/bucket.py:1077: in reload
+    super(Bucket, self).reload(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/_helpers.py:246: in reload
+    api_response = client._get_resource(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/client.py:385: in _get_resource
+    return self._connection.api_request(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/storage/_http.py:72: in api_request
+    return call()
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/api_core/retry.py:349: in retry_wrapped_func
+    return retry_target(
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/api_core/retry.py:191: in retry_target
+    return target()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <google.cloud.storage._http.Connection object at 0x7fbbca402ef0>
+method = 'GET', path = '/b/taxifare_blamb888'
+query_params = {'projection': 'noAcl'}, data = None, content_type = None
+headers = {}, api_base_url = None, api_version = None, expect_json = True
+_target_object = <Bucket: taxifare_blamb888>, timeout = 60
+extra_api_info = 'gccl-invocation-id/de80c537-cd99-4a82-b769-86d34e2c7a04'
+
+    def api_request(
+        self,
+        method,
+        path,
+        query_params=None,
+        data=None,
+        content_type=None,
+        headers=None,
+        api_base_url=None,
+        api_version=None,
+        expect_json=True,
+        _target_object=None,
+        timeout=_DEFAULT_TIMEOUT,
+        extra_api_info=None,
+    ):
+        """Make a request over the HTTP transport to the API.
+    
+        You shouldn't need to use this method, but if you plan to
+        interact with the API using these primitives, this is the
+        correct one to use.
+    
+        :type method: str
+        :param method: The HTTP method name (ie, ``GET``, ``POST``, etc).
+                       Required.
+    
+        :type path: str
+        :param path: The path to the resource (ie, ``'/b/bucket-name'``).
+                     Required.
+    
+        :type query_params: dict or list
+        :param query_params: A dictionary of keys and values (or list of
+                             key-value pairs) to insert into the query
+                             string of the URL.
+    
+        :type data: str
+        :param data: The data to send as the body of the request. Default is
+                     the empty string.
+    
+        :type content_type: str
+        :param content_type: The proper MIME type of the data provided. Default
+                             is None.
+    
+        :type headers: dict
+        :param headers: extra HTTP headers to be sent with the request.
+    
+        :type api_base_url: str
+        :param api_base_url: The base URL for the API endpoint.
+                             Typically you won't have to provide this.
+                             Default is the standard API base URL.
+    
+        :type api_version: str
+        :param api_version: The version of the API to call.  Typically
+                            you shouldn't provide this and instead use
+                            the default for the library.  Default is the
+                            latest API version supported by
+                            google-cloud-python.
+    
+        :type expect_json: bool
+        :param expect_json: If True, this method will try to parse the
+                            response as JSON and raise an exception if
+                            that cannot be done.  Default is True.
+    
+        :type _target_object: :class:`object`
+        :param _target_object:
+            (Optional) Protected argument to be used by library callers. This
+            can allow custom behavior, for example, to defer an HTTP request
+            and complete initialization of the object at a later time.
+    
+        :type timeout: float or tuple
+        :param timeout: (optional) The amount of time, in seconds, to wait
+            for the server response.
+    
+            Can also be passed as a tuple (connect_timeout, read_timeout).
+            See :meth:`requests.Session.request` documentation for details.
+    
+        :type extra_api_info: string
+        :param extra_api_info: (optional) Extra api info to be appended to
+            the X-Goog-API-Client header
+    
+        :raises ~google.cloud.exceptions.GoogleCloudError: if the response code
+            is not 200 OK.
+        :raises ValueError: if the response content type is not JSON.
+        :rtype: dict or str
+        :returns: The API response payload, either as a raw string or
+                  a dictionary if the response is valid JSON.
+        """
+        url = self.build_api_url(
+            path=path,
+            query_params=query_params,
+            api_base_url=api_base_url,
+            api_version=api_version,
+        )
+    
+        # Making the executive decision that any dictionary
+        # data will be sent properly as JSON.
+        if data and isinstance(data, dict):
+            data = json.dumps(data)
+            content_type = "application/json"
+    
+        response = self._make_request(
+            method=method,
+            url=url,
+            data=data,
+            content_type=content_type,
+            headers=headers,
+            target_object=_target_object,
+            timeout=timeout,
+            extra_api_info=extra_api_info,
+        )
+    
+        if not 200 <= response.status_code < 300:
+>           raise exceptions.from_http_response(response)
+E           google.api_core.exceptions.NotFound: 404 GET https://storage.googleapis.com/storage/v1/b/taxifare_blamb888?projection=noAcl&prettyPrint=false: The specified bucket does not exist.
+
+../../../.pyenv/versions/3.10.6/envs/taxifare-env/lib/python3.10/site-packages/google/cloud/_http/__init__.py:494: NotFound
+----------------------------- Captured stdout call -----------------------------
+
+⭐️ Use case: predict
+[34m
+Load latest model from GCS...[0m
+________________________________ test_i_am_a_vm ________________________________
+
+    def test_i_am_a_vm():
+        """
+        Test that this code is being run from a Google VM named as per env variable 'INSTANCE'
+        """
+    
+>       assert platform.node() == INSTANCE, f"You should be running from your instance named '{INSTANCE}'."
+E       AssertionError: You should be running from your instance named 'taxi-instance-blamb888'.
+E       assert 'BrandonG7' == 'taxi-instance-blamb888'
+E         - taxi-instance-blamb888
+E         + BrandonG7
+
+tests/cloud_training/test_vm.py:9: AssertionError
+=========================== short test summary info ============================
+FAILED tests/cloud_training/test_main.py::TestMain::test_route_train[local]
+FAILED tests/cloud_training/test_main.py::TestMain::test_route_train[gcs] - g...
+FAILED tests/cloud_training/test_main.py::TestMain::test_route_evaluate - goo...
+FAILED tests/cloud_training/test_main.py::TestMain::test_route_pred - google....
+FAILED tests/cloud_training/test_vm.py::test_i_am_a_vm - AssertionError: You ...
+========================= 5 failed, 4 passed in 34.14s =========================
